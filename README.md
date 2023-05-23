@@ -27,7 +27,6 @@
 | 200         | The requested action has been successfully completed. |
 | 400         | Transient Negative Completion reply |
 | 500         | Permanent Negative Completion reply |
-
 ### expected stream
-*   [*command*, *data*]
-*   *E.g*: ["LOG", {"username": "user1", "password": "pass1"}]
+*   {*command*, *data*}
+*   *E.g*: "{"command": "LOG", "data": {"username": "user1", "password": "pass1"}}
