@@ -29,4 +29,14 @@
 | 500         | Permanent Negative Completion reply |
 ### expected stream
 *   {*command*, *data*}
-*   *E.g*: "{"command": "LOG", "data": {"username": "user1", "password": "pass1"}}
+*   *E.g*:  
+    
+    ```json
+    {
+        "command": "LOG", 
+        "data": {
+            "username": "user1", 
+            "password": "pass1"
+        }
+    }
+    ```
