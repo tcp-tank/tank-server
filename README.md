@@ -4,12 +4,20 @@
 | :---------- | :-------------------------------- |
 | LOG         | Login user. |
 | REG         | Register new user. |
+| DEL         | Delete user. |
 | QUIT        | Disconnect. |
-| STAT        | Returns information of server, including address and port to which the client should connect. |
-| ACCT        | User account information. |
-| DELE        | Delete user. |
+| CRTR        | Create new room. |
+| DELR        | Delete room. |
+| AVBL        |	Get available game rooms |
+| MOVE        | Move tank with position |
+| SHOT        | Bullets..           |
+| SCRS        | Get user scores. |
+| SCRA        | Get user scores. (Ascending) |
+| SCRD        | Get user scores. (Descending). |
 | BRDC        | Broadcast message. |
 | SEND        | Send message. |
+| STAT        | Returns information of server, including address and port to which the client should connect. |
+| ACCT        | User account information. |
 
 ### server return codes
 
