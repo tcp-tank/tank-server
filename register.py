@@ -1,11 +1,16 @@
 import json
 
+from constants import *
+
 def register(username, password):
     try:
         with open("data.json", "r") as data:
             users = json.load(data)
 
             user_found = False
+            is_created = False
+            reply = ""
+            code = FAILURE
             for user in users:
                 if user["username"] == username:
                     user_found = True
@@ -23,16 +28,34 @@ def register(username, password):
                     with open("data.json", "w") as db:
                         json_text = json.dumps(users, default=obj_dict)
                         db.write(json_text)
-                    print("register successful")
+                    is_created = True
+                    reply = "register successful"
+                    code = SUCCESS
                 except Exception as e:
                     print(e)
+                    return {
+                        "code": FAILURE,
+                        "is_created": False,
+                        "message": "db connection failure"
+                    }
             else:
-                print("username already taken, try another one...")
+                reply = "username already taken, try another one..."
+
+            return {
+                "code": code,
+                "is_created": is_created,
+                "message": reply
+            }
                 
     except Exception as e:
         print(e)
+        return {
+            "code": FAILURE,
+            "is_created": False,
+            "message": "db connection failure"
+        }
 
 def obj_dict(obj):
     return obj.__dict__
 
-register("oguzhn", "kuslar")
+# print(register("oguzhn", "kuslar"))

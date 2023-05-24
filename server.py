@@ -3,19 +3,14 @@ from socket import AF_INET, SOCK_STREAM, socket, error
 from threading import Thread
 import traceback
 from constants import *
+from login import login
+from register import register
 
 class Client:
     def __init__(self, addr):
         self.addr = addr
         self.username = ""
         self.logged_in = False
-    def login(self, username):
-        self.username = username
-        self.logged_in = True
-    def logout(self):
-        self.logged_in = False
-    def listen(self):
-        pass
 
 class Server:
     def __init__(self):
@@ -50,48 +45,74 @@ class Server:
                 break    
     
     def stop(self):
+        self.close_connections()
         self.server.close()
         print("Server was closed...")
     
     def new_connection(self, fd, addr):
         client = Client(addr)
         self.connections[fd] = client
-        fd.send(Server.encode({
-            "code": SUCCESS
-        }))
+        self.send(fd, SUCCESS, STRT, message="Connection success.")
         Thread(target=self.client_ops, args=(fd,), daemon=True).start() # START NEW DAEMON THREAD FOR EACH CLIENT_FD
 
     def client_ops(self, fd):
-        try:
-            while True: # Wait username and password to init client
-                try:
-                    response = fd.recv(self.BUFFER_SIZE)
-                    print(response)
-                    json_data = json.loads(response)
+        while True: # Client command loop
+            try:
+                recvd_bytes = fd.recv(self.BUFFER_SIZE)
+                recvd_json = json.loads(recvd_bytes)
+                print(str(f"Recieved from (%s:%s):" %self.connections[fd].addr) + recvd_bytes.decode())
 
-                    command = json_data["command"]
-                    # data = json_data["data"]
-                    
-                    if(command == QUIT): # DISCONNECTION
-                        reply = "Disconnected: %s:%s." %self.connections[fd].addr
-                        self.broadcast(reply, fd)
+                if "command" in recvd_json and "data" in recvd_json:
+                    command = recvd_json["command"]
+                    data    = recvd_json["data"]
+                    if command == QUIT: # DISCONNECTION
+                        print("Disconnected: %s:%s." %self.connections[fd].addr)
                         self.close_connection(fd)
                         return
-                    else:
+                    elif command == LOG: # USER LOGIN
+                        self.login(fd, data)
+                    elif command == REG: # USER REGISTER
+                        self.register(fd, data)
+                    elif command == BRDC: # BROADCAST
+                        b_type = data["b_type"]
+                        if b_type == LEFT:   # REMOVE PLAYER FROM PLAYER LIST
+                            self.connections[fd].logged_in = False
+                            self.connections[fd].username = ""
+                            self.send(fd, SUCCESS, QUIT)
+                            self.broadcast(fd, LEFT, {
+                                "username": self.connections[fd].username,
+                                "addr": fd.getpeername()
+                            })
+                        if b_type == MOVE:
+                            pass
                         pass
-                except:
-                    break
-        except error:
-            self.close_connection(fd)
-            return
+                    else: # Given invalid command
+                        self.send(fd, FAILURE, message="invalid command.")
+                else: # Given no command
+                    self.send(fd, FAILURE, message="command and data props are missing")
+            except error as e: # Connection lost or any kind of error with recv regarding to active socket
+                traceback.print_exc()
+                self.close_connection(fd)
+                break
         
-    def broadcast(self, msg, user_fd=""):
+    def broadcast(self, from_fd, b_type, data):
         for fd in self.connections:
-            if(self.connections[fd].logged_in and fd != user_fd):
-                fd.send(Server.encode({
-                    "code": SUCCESS,
-                    "data": (f"{self.connections[user_fd].username} (%s:%s): {msg}" %self.connections[user_fd].addr)
-                }))
+            if(self.connections[fd].logged_in and fd != from_fd):
+                self.send(fd, SUCCESS, BRDC, data, b_type)
+    
+    def send(self, fd, code, command="", data={}, message=""):
+        response = Server.encode({
+            "code": code,
+            "command": command,
+            "data": data,
+            "message": message
+        })
+        try:
+            fd.send(response)
+            print(str(f"Sended to (%s:%s): " %self.connections[fd].addr) + response.decode())
+        except error:
+            traceback.print_exc()
+            print(str(f"Couldn't send to (%s:%s): " %self.connections[fd].addr) + response.decode())
 
     def print_connections(self):
         for fd in self.connections:
@@ -99,17 +120,58 @@ class Server:
             print(self.connections[fd])
             print(self.connections[fd].logged_in)
 
+    def login(self, fd, data):
+        if "username" in data and "password" in data:
+            is_logged_in = self.is_logged_in(data["username"])
+
+            if is_logged_in:
+                self.send(fd, FAILURE, LOG, data, "already logged in.")
+            else:
+                response = login(data["username"], data["password"])
+                if response["user_found"]:
+                    self.send(fd, response["code"], LOG, data, response["message"])
+                    if(response["code"] == SUCCESS):
+                        self.connections[fd].username = data["username"]
+                        self.connections[fd].logged_in = True
+                        self.broadcast(fd, JOINED, {
+                            "username": data["username"],
+                            "addr": fd.getpeername()
+                        })
+                else:
+                    self.send(fd, response["code"], LOG, data, response["message"])
+
+        else:
+            self.send(fd, response["code"], LOG, data, "username and password props are missing.")
+
+    def is_logged_in(self, username):
+        logged_in = False
+        for con in self.connections.values():
+            if con.username == username:
+                logged_in = True
+                break
+        return logged_in
+
+    def register(self, fd, data):
+        if "username" in data and "password" in data:
+            response = register(data["username"], data["password"])
+            if response["is_created"]:
+                self.send(fd, response["code"], REG, data, response["message"])
+            else:
+                self.send(fd, response["code"], REG, data, response["message"])
+        else:
+            self.send(fd, response["code"], REG, data, "username and password props are missing.")
+
     def close_connection(self, fd):
         fd.close()
         del self.connections[fd]
 
     def close_connections(self):
         for fd in self.connections:
+            reply = "Server closed."
             try:
-                fd.send(Server.encode({
-                    "code": QUIT
-                }))
+                self.send(fd, CRASH, QUIT, message=reply)
                 fd.close()
+                print(str(f"Sended to (%s:%s): " %self.connections[fd].addr) + reply)
             except: # Socket closed already
                 pass
 
@@ -133,42 +195,3 @@ if __name__ == "__main__":
             break
         server.print_connections()
     server.stop()
-
-
-
-
-    # def client_ops(self, fd):
-    #     try:
-    #         fd.send("Enter your username:".encode())
-    #         username = fd.recv(self.BUFFER_SIZE).decode()
-    #         if(username == QUIT): # DISCONNECTION
-    #             reply = "Disconnected: %s:%s." %self.connections[fd].addr
-    #             print(reply)
-    #             self.broadcast(reply, fd)
-    #             self.close_connection(fd)
-    #             return
-    #         else: # BROADCAST JOINED USER TO OTHERS
-    #             self.connections[fd].login(username)
-    #             self.broadcast("Joined.", fd)
-    #             fd.send("Listening.. what do you want to say?".encode())
-    #             while True: # SEND & RECIEVE MESSAGES THROUGH THE CLIENT_FD
-    #                 try:
-    #                     recvd_message = fd.recv(self.BUFFER_SIZE).decode()
-    #                     if(recvd_message == QUIT): # DELETE CLIENT_FD FROM ACTIVE CONNECTIONS WHEN IT LEAVES
-    #                         print(f"Disconnected: %s:%s ({self.connections[fd].username})." %self.connections[fd].addr)
-    #                         self.broadcast("Left.", fd)
-    #                         fd.send(QUIT.encode())
-    #                         self.close_connection(fd)
-    #                         break
-    #                     # PRINT CLIENT MESSAGE
-    #                     print(self.connections[fd].username + " (%s:%s): " %self.connections[fd].addr + recvd_message)
-    #                     self.broadcast(recvd_message, fd)
-    #                 except error as e:
-    #                     traceback.print_exc()
-    #                     print(str(e))
-    #                     break
-    #     except error as e:
-    #         self.close_connection(fd)
-    #         traceback.print_exc()
-    #         print(str(e))
-    #         return
