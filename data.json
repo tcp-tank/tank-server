@@ -1,5 +1,7 @@
 [
-    { "username": "oguzhan", "password": "kuslar", "score": 10 },
-    { "username": "dogukan", "password": "kuslar", "score": 25 },
-    { "username": "oguzhn", "password": "kuslar", "score": 0 }
+    { "uid": 0, "username": "oguzhan", "password": "kuslar", "score": 10 },
+    { "uid": 1, "username": "dogukan", "password": "kuslar", "score": 25 },
+    { "uid": 2, "username": "oguzhn", "password": "kuslar", "score": 0 },
+    { "uid": 3, "username": "zeynep", "password": "asdasd", "score": 0 },
+    { "uid": 3, "username": "muzeyyen", "password": "asdasd", "score": 0 }
 ]

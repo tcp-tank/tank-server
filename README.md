@@ -1,23 +1,21 @@
-### `tank-protocol` commands 
 
 | Command     | Description                       |
 | :---------- | :-------------------------------- |
-| LOG         | Login user. |
-| REG         | Register new user. |
-| DEL         | Delete user. |
-| QUIT        | Disconnect. |
-| CRTR        | Create new room. |
-| DELR        | Delete room. |
-| AVBL        |	Get available game rooms |
-| MOVE        | Move tank with position |
-| SHOT        | Bullets..           |
-| SCRS        | Get user scores. |
-| SCRA        | Get user scores. (Ascending) |
-| SCRD        | Get user scores. (Descending). |
-| BRDC        | Broadcast message. |
-| SEND        | Send message. |
-| STAT        | Returns information of server, including address and port to which the client should connect. |
-| ACCT        | User account information. |
+| INIT        | First server respond.|
+| EXIT        | Exit Game.|
+| LOGN        | Login. |
+| LOGT        | Logout. |
+| ENTL        | User enters lobby. |
+| ENTR        | User enters room. |
+| LVER        | User leaves room. |
+| LVEL        |	User leaves lobby. |
+| CRTR        | Create Room. |
+| SRTG        | Start Game. |
+| MOVE        | Tank move. |
+| SHOT        | Tank shot. |
+| MESG        | Message to chat. |
+| DOWN        | Server closed. |
+
 
 ### server return codes
 
